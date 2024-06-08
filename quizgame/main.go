@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/csv"
 	"flag"
 	"fmt"
@@ -29,16 +28,17 @@ func printProblem(id int, input []string) {
 	fmt.Printf("Problem #%d: %s ?", id, input[0])
 }
 
-func printScore(score int) {
-	fmt.Println("You have scored ", score)
+func printScore(score, totalscore int) {
+	fmt.Printf("You have scored %d out of %d", score, totalscore)
 }
 
 func main() {
 
 	var (
-		filename string
-		correct  int
-		timeout  int
+		filename   string
+		score      int
+		timeout    int
+		totalscore int
 	)
 
 	flag.StringVar(&filename, "filename", "problem.csv", "Please specify file from where quiz game will be loaded")
@@ -46,28 +46,26 @@ func main() {
 
 	flag.Parse()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
-	defer cancel()
+	timer := time.After(time.Duration(timeout) * time.Second)
 	go func() {
-		select {
-		case <-ctx.Done():
-			fmt.Println()
-			printScore(correct)
-			os.Exit(0)
-		}
+		<-timer
+		fmt.Println()
+		printScore(score, totalscore)
+		os.Exit(0)
 	}()
 	records := readCsvFile("problem.csv")
+	totalscore = len(records)
 	for i, r := range records {
 		printProblem(i+1, r)
 		var answer string
 		_, err := fmt.Scanf("%s\n", &answer)
 		if err != nil {
 			fmt.Println()
-			fmt.Println("You have scored ", correct)
+			printScore(score, totalscore)
 			log.Fatal(err.Error())
 		}
 		if r[1] == strings.TrimSpace(answer) {
-			correct++
+			score++
 		}
 	}
 	// fmt.Println("You have scored ", correct)
